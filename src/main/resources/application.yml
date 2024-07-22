@@ -1,0 +1,16 @@
+spring:
+    application:
+        name: LhtFs
+
+    servlet:
+        multipart:
+            max-file-size: 10MB
+
+
+lhtfs:
+    path: F:\lhtfs8080
+    backupUrl: http://localhost:8081/upload
+server:
+    servlet:
+        encoding:
+            charset: UTF-8
