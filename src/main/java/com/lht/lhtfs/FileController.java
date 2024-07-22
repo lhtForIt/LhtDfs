@@ -20,7 +20,7 @@ import java.io.*;
 import java.net.URLEncoder;
 import java.util.UUID;
 
-import static com.lht.lhtfs.HttpSyncer.XFINAL_NAME;
+import static com.lht.lhtfs.HttpSyncer.*;
 
 /**
  * @author Leo
@@ -47,11 +47,16 @@ public class FileController {
         //1. 处理文件
         String fileName = request.getHeader(XFINAL_NAME);
         boolean needSync = false;
-        if (!StringUtils.hasLength(fileName)) {
+        String originalFilename = file.getOriginalFilename();
+        if (!StringUtils.hasLength(fileName)) {// upload上传文件
             needSync = true;
-//            fileName = file.getOriginalFilename();
-            fileName = FileUtils.getUUIDFile(file.getOriginalFilename());
+            fileName = FileUtils.getUUIDFile(originalFilename);
             fileName = StringEscapeUtils.unescapeHtml4(fileName);
+        } else {// 同步文件
+            String oriFileName = request.getHeader(XORIGIN_FINAL_NAME);
+            if (StringUtils.hasLength(oriFileName)) {
+                originalFilename = oriFileName;
+            }
         }
         String subDir=FileUtils.getSubDir(fileName);
         File dest = new File(uploadPath + "/" + subDir + "/" + fileName);
@@ -60,7 +65,7 @@ public class FileController {
         //2. 处理meta
         FileMeta meta = new FileMeta();
         meta.setName(fileName);
-        meta.setOriginalFilename(file.getOriginalFilename());
+        meta.setOriginalFilename(originalFilename);
         meta.setSize(file.getSize());
         if (autoMd5) {
             meta.getTags().put("md5", DigestUtils.md5DigestAsHex(new FileInputStream(dest)));
@@ -77,7 +82,7 @@ public class FileController {
         //3. 同步到backup
         //同步文件到backup
         if (needSync) {
-            httpSyncer.sync(dest, backupUrl);
+            httpSyncer.sync(dest, backupUrl, originalFilename);
         }
 
         return fileName;

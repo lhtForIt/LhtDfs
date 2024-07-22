@@ -12,7 +12,6 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
-import java.net.URLEncoder;
 
 /**
  * @author Leo
@@ -22,14 +21,17 @@ import java.net.URLEncoder;
 public class HttpSyncer {
 
     public static final String XFINAL_NAME = "X-Filename";
+    public static final String XORIGIN_FINAL_NAME = "X-Origin-Filename";
+
 
     @SneakyThrows
-    public String sync(File file, String url) {
+    public String sync(File file, String url, String originalFilename) {
 
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         headers.add(XFINAL_NAME, file.getName());
+        headers.add(XORIGIN_FINAL_NAME, originalFilename);
 
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         builder.part("file", new FileSystemResource(file));
