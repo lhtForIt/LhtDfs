@@ -2,9 +2,14 @@ package com.lht.lhtfs;
 
 import com.alibaba.fastjson.JSON;
 import lombok.SneakyThrows;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 
-import java.io.File;
+import java.io.*;
 import java.net.FileNameMap;
 import java.net.URLConnection;
 import java.nio.file.Files;
@@ -65,5 +70,28 @@ public class FileUtils {
     public static void writeMeta(File metaFile, FileMeta meta) {
         String json = JSON.toJSONString(meta);
         Files.writeString(Paths.get(metaFile.getAbsolutePath()), json, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+    }
+
+    @SneakyThrows
+    public static void writeString(File metaFile, String content) {
+        Files.writeString(Paths.get(metaFile.getAbsolutePath()), content, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+    }
+
+    @SneakyThrows
+    public static void download(String download, File file) {
+        System.out.println(" ======> download file: " + file.getAbsolutePath());
+        RestTemplate restTemplate = new RestTemplate();
+        HttpEntity<?> entity = new HttpEntity<>(new HttpHeaders());
+        ResponseEntity<Resource> exchange = restTemplate
+                .exchange(download, HttpMethod.GET, entity, Resource.class);
+        InputStream fis = new BufferedInputStream(exchange.getBody().getInputStream());
+        byte[] buffer = new byte[16 * 1024];
+        OutputStream ops = new FileOutputStream(file);
+        while (fis.read(buffer) != -1) {
+            ops.write(buffer);
+        }
+        ops.flush();
+        ops.close();
+        fis.close();
     }
 }

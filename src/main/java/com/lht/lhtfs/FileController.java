@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.DigestUtils;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,10 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
-import java.net.URLEncoder;
-import java.util.UUID;
 
-import static com.lht.lhtfs.HttpSyncer.*;
+import static com.lht.lhtfs.HttpSyncer.XFILE_NAME;
+import static com.lht.lhtfs.HttpSyncer.XORIGIN_FILE_NAME;
 
 /**
  * @author Leo
@@ -35,17 +33,26 @@ public class FileController {
     @Value("${lhtfs.autoMd5}")
     private boolean autoMd5;
 
+    @Value("${lhtfs.syncBackup}")
+    private boolean syncBackup;
+
     @Value("${lhtfs.backupUrl}")
     private String backupUrl;
 
+    @Value("${lhtfs.downloadUrl}")
+    private String downloadUrl;
+
     @Autowired
     private HttpSyncer httpSyncer;
+
+    @Autowired
+    private MQSyncer mqSyncer;
 
     @SneakyThrows
     @PostMapping("/upload")
     public String uploadFile(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
         //1. 处理文件
-        String fileName = request.getHeader(XFINAL_NAME);
+        String fileName = request.getHeader(XFILE_NAME);
         boolean needSync = false;
         String originalFilename = file.getOriginalFilename();
         if (!StringUtils.hasLength(fileName)) {// upload上传文件
@@ -53,7 +60,7 @@ public class FileController {
             fileName = FileUtils.getUUIDFile(originalFilename);
             fileName = StringEscapeUtils.unescapeHtml4(fileName);
         } else {// 同步文件
-            String oriFileName = request.getHeader(XORIGIN_FINAL_NAME);
+            String oriFileName = request.getHeader(XORIGIN_FILE_NAME);
             if (StringUtils.hasLength(oriFileName)) {
                 originalFilename = oriFileName;
             }
@@ -67,6 +74,7 @@ public class FileController {
         meta.setName(fileName);
         meta.setOriginalFilename(originalFilename);
         meta.setSize(file.getSize());
+        meta.setDownloadUrl(downloadUrl);
         if (autoMd5) {
             meta.getTags().put("md5", DigestUtils.md5DigestAsHex(new FileInputStream(dest)));
         }
@@ -81,8 +89,18 @@ public class FileController {
 
         //3. 同步到backup
         //同步文件到backup
+        //既可以同步处理文件复制也可以异步处理文件复制。
         if (needSync) {
-            httpSyncer.sync(dest, backupUrl, originalFilename);
+            if (syncBackup) {
+                try {
+                    httpSyncer.sync(dest, backupUrl, originalFilename);
+                }catch (Exception e){
+                    e.printStackTrace();
+//                    MQSyncer.sync(dest, backupUrl, originalFilename);
+                }
+            } else {
+                mqSyncer.sync(meta);
+            }
         }
 
         return fileName;

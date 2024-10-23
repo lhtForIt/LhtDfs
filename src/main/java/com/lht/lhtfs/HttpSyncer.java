@@ -20,8 +20,8 @@ import java.io.File;
 @Component
 public class HttpSyncer {
 
-    public static final String XFINAL_NAME = "X-Filename";
-    public static final String XORIGIN_FINAL_NAME = "X-Origin-Filename";
+    public static final String XFILE_NAME = "X-Filename";
+    public static final String XORIGIN_FILE_NAME = "X-Origin-Filename";
 
 
     @SneakyThrows
@@ -30,8 +30,8 @@ public class HttpSyncer {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-        headers.add(XFINAL_NAME, file.getName());
-        headers.add(XORIGIN_FINAL_NAME, originalFilename);
+        headers.add(XFILE_NAME, file.getName());
+        headers.add(XORIGIN_FILE_NAME, originalFilename);
 
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         builder.part("file", new FileSystemResource(file));
